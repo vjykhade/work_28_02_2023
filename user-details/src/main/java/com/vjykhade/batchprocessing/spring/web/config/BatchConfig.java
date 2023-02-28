@@ -2,25 +2,31 @@ package com.vjykhade.batchprocessing.spring.web.config;
 
 import com.vjykhade.batchprocessing.spring.web.entity.UserDetails;
 
+import com.vjykhade.batchprocessing.spring.web.repository.UserDetailsRepository;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
@@ -31,25 +37,42 @@ import java.util.Random;
 
 @Configuration
 @EnableBatchProcessing
-public class BatchConfig {
+public class BatchConfig extends DefaultBatchConfiguration {
 
     private  JobRepository jobRepository;
     private PlatformTransactionManager transactionManagerBatch;
 
+    @Bean
+    public FieldSetMapper fieldSetMapper() {
+        BeanWrapperFieldSetMapper fieldSetMapper = new BeanWrapperFieldSetMapper();
+
+        fieldSetMapper.setPrototypeBeanName("userDetails");
+
+        return fieldSetMapper;
+    }
+
+    @Bean
+    @Scope("prototype")
+    public UserDetails userDetails() {
+        return new UserDetails();
+    }
     @Bean
     public ItemReader<UserDetails> reader()
     {
         System.out.println("Coming to Item Reader");
         return new FlatFileItemReader<UserDetails>() {{
             setResource(new FileSystemResource("C:/Users/vjykh/OneDrive/Desktop/MOCK_DATA.csv"));
+            setLinesToSkip(1);
             setLineMapper(new DefaultLineMapper<UserDetails>() {{
                 setLineTokenizer(new DelimitedLineTokenizer() {{
                     setDelimiter(",");
+                    setStrict(false);
                     setNames("id","fullName","birthDate","city","mobileNo");
                 }});
                 setFieldSetMapper(new BeanWrapperFieldSetMapper<UserDetails>() {{
                     setTargetType(UserDetails.class);
                 }});
+
             }});
         }};
     }//ItemReader End
@@ -63,9 +86,19 @@ public class BatchConfig {
         };
     }//Item Processor End
 
-    @Autowired
-    private EntityManagerFactory entityManagerFactory;
+//    @Autowired
+//    private EntityManagerFactory entityManagerFactory;
 
+//    public RepositoryItemWriter<UserDetails> writer()
+//    {
+//        RepositoryItemWriter writer = new RepositoryItemWriter<>();
+//        writer.setRepository(userDetailsRepository);
+//        writer.setMethodName("save");
+//        return writer;
+//    }
+
+    @Autowired
+   private EntityManagerFactory entityManagerFactory;
     @Bean
     public ItemWriter<UserDetails> writer(){
         System.out.println("Coming to Item Writer");
@@ -100,10 +133,11 @@ public class BatchConfig {
     @Bean
     public Job sampleJob(JobRepository jobRepository, Step sampleStep) {
         return new JobBuilder("sampleJob", jobRepository)
-                .start(sampleStep)
-                .incrementer(new RunIdIncrementer())
-                .listener(listener())
-                .build();
+//                .start(sampleStep)
+//                .incrementer(new RunIdIncrementer())
+//                .listener(listener())
+//                .build();
+                .flow(sampleStep).end().build();
     }
 
 }//Batch Config End

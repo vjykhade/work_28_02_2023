@@ -8,8 +8,7 @@ import lombok.Data;
 @Table(name="user_details")
 public class UserDetails {
     @Id
-    @Column(name="uid")
-    private String id;
+    private Integer id;
     private String fullName;
     private String birthDate;
     private String city;
